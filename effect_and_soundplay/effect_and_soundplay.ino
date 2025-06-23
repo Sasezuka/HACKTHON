@@ -23,32 +23,13 @@ void setup() {
 }
 
 void loop() {
-  // マスターがSSピンをLOWにしている間だけ、SPI通信が行われる
-  // SPI.transfer()はマスターからのデータを受信するまでブロックする
-  // Arduino 2が2バイト送信するので、2回SPI.transfer()を呼び出す
-  
-  // SSピンの状態を確認（スレーブが選択されているか）
-  if (digitalRead(SS) == LOW) { // SSピンがLOWのときだけ処理
-    byte highByte = SPI.transfer(0x00); // 上位8bitを受信
-    byte lowByte = SPI.transfer(0x00);  // 下位4bitを受信
+  // スレーブセレクトピンの状態をひたすら表示する
+  // これでSSピンの配線とマスターからの信号が来ているかを確認
 
-    uint16_t currentReceivedValue = (uint16_t)highByte << 4; // 上位8bitを12bitデータの上位にシフト
-    currentReceivedValue |= (lowByte & 0x0F);       // 下位4bitのみ結合
+  int ss_state = digitalRead(SS);
+  Serial.print("SS Pin State: ");
+  Serial.println(ss_state == HIGH ? "HIGH" : "LOW");
 
-    // 受信した生のバイト値も表示してみる
-    Serial.print("Raw High: ");
-    Serial.print(highByte, HEX); // 16進数で表示
-    Serial.print(", Raw Low: ");
-    Serial.print(lowByte, HEX);  // 16進数で表示
-
-    Serial.print(", Received Value: ");
-    Serial.println(currentReceivedValue);
-
-    // 今回はデバッグのため、newDataAvailableフラグは使わない
-    // serial.printの負荷は高いので、普段は使うべきではありません。
-  } else {
-    // SSピンがHIGHのときは何も受信しないはず
-    // Serial.println("SS is HIGH. Waiting for master...");
-    delay(10); // 無限ループにならないように少し待つ
-  }
+  // SPI.transfer() は呼び出さない（ブロックされる可能性を排除）
+  delay(100); // 100msごとに状態を表示
 }
