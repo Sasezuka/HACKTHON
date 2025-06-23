@@ -1,69 +1,56 @@
-// --- Arduino3_I2C_Slave_Test.ino ---
+// --- Arduino3_Waveform_Receiver_UART.ino ---
 
-#include <Wire.h> // I2C通信ライブラリをインクルード
+// #include <SPI.h> // SPIライブラリは不要になるのでコメントアウトまたは削除
 
-const int SLAVE_ADDRESS = 8; // マスターと同じアドレスを設定
-
-volatile uint16_t receivedValue = 0;
-volatile bool newDataAvailable = false; // 新しいデータが受信されたことを示すフラグ
+// 今回はSerial1で受信するので、Serial1を使います
+// TX: デジタルピン1, RX: デジタルピン0
 
 void setup() {
-  Serial.begin(115200);
-  Serial.println("Arduino 3 (Slave) I2C Test Started!");
+  Serial.begin(115200);   // PCとのデバッグ用シリアル通信
+  Serial.println("Arduino 3 (Receiver) Waveform Started!");
 
-  // スレーブアドレスを指定してI2C通信を開始
-  Wire.begin(SLAVE_ADDRESS); 
-  
-  // マスターからデータが受信されたときに呼び出される関数を登録
-  Wire.onReceive(receiveEvent); 
+  // ★★★ 変更点：Serial1 のボーレートを送信側と合わせる ★★★
+  Serial1.begin(SERIAL_BAUDRATE); // 送信側と同じボーレートに設定 (constants.hの値)
+  Serial.println("Serial1 initialized.");
 
-  Serial.println("I2C Slave Initialized.");
+  // SPI関連のセットアップは不要なので削除またはコメントアウト
+  // pinMode(SS, INPUT_PULLUP);
+  // SPI.begin();
 }
+
+// 受信したデータを結合するための変数
+volatile byte receivedHighByte = 0;
+volatile byte receivedLowByte = 0;
+volatile bool firstByteReceived = false; // 1バイト目を受信したかを示すフラグ
 
 void loop() {
-  // 新しいデータが受信されたらシリアルモニターに表示
-  // onReceiveイベントは割り込みで実行されるため、loop()は他の処理に使える
-  if (newDataAvailable) {
-    Serial.print("Received: ");
-    Serial.println(receivedValue);
-    newDataAvailable = false; // フラグをリセット
-  }
-  // その他の処理があればここに記述
-}
+  if (Serial1.available()) { // Serial1 に受信データがあるか確認
+    byte incomingByte = Serial1.read();
 
-// データ受信時に呼び出される関数
-// マスタからデータを受信すると、この関数が自動的に呼び出される
-void receiveEvent(int howMany) {
-  byte highByte = 0;
-  byte lowByte = 0;
+    if (!firstByteReceived) {
+      // 1バイト目（上位バイト）を受信
+      receivedHighByte = incomingByte;
+      firstByteReceived = true;
+    } else {
+      // 2バイト目（下位バイト）を受信
+      receivedLowByte = incomingByte;
+      
+      // 2バイトを結合して16bit値にする
+      uint16_t receivedSample = ((uint16_t)receivedHighByte << 8) | receivedLowByte;
 
-  if (howMany >= 2) { // 少なくとも2バイト受信したことを確認
-    highByte = Wire.read(); // 最初のバイト（上位8ビット）を読み込む
-    lowByte = Wire.read();  // 次のバイト（下位8ビット）を読み込む
-    
-    // 12bitデータとして結合 (マスターが送る形式に合わせて調整)
-    // マスター側ではsendValueの>>8と&0xFFで上位8bitと下位8bitに分割しているため
-    // スレーブ側ではreceivedValue = (uint16_t)highByte << 8; と結合し、
-    // lowByteはそのまま加算する。
-    // 元のSPIではlowByteが4ビットだけだったが、I2Cでは8ビットまるごと送信する。
-    // もし12ビットデータとして厳密に扱うなら、lowByteの0x0Fマスクは不要。
-    // ここではSPIの結合ロジックに合わせて、上位8bit + 下位4bitとして結合
-    // もしくは、送るデータに合わせて結合ロジックを調整します。
-    // 例：12bitデータを上位4bit(0x0F) + 下位8bit(0xFF)で送る場合
-    // highByte = (sendValue >> 8) & 0x0F;
-    // lowByte = sendValue & 0xFF;
-    // receivedValue = (uint16_t)highByte << 8 | lowByte;
+      // 受信したデータをシリアルモニターに表示
+      Serial.print("Received (raw 2 bytes): ");
+      Serial.print(receivedHighByte, HEX);
+      Serial.print(" ");
+      Serial.print(receivedLowByte, HEX);
+      Serial.print(", Combined: ");
+      Serial.println(receivedSample);
 
-    // 今回はsendValueを上位8bitと下位8bitで送るので、その結合方法で。
-    // もし12bitとして厳密に結合したいなら、lowByteのマスクは不要
-    // receivedValue = ((uint16_t)highByte << 8) | lowByte;
+      // TODO: ここで receivedSample を使って音を生成
+      // 例: analogWrite(PWM_PIN, receivedSample >> 4); // 12bitから8bitに変換してPWM出力
+      // あるいは、適切なDAC出力など
 
-    // SPIの時の12bitデータフォーマットを維持するなら
-    // マスター: byte highByte = (sendValue >> 4) & 0xFF; byte lowByte = sendValue & 0x0F;
-    // スレーブ: receivedValue = (uint16_t)highByte << 4; receivedValue |= (lowByte & 0x0F);
-    // しかしI2Cなら2バイトまるごと送る方が自然なので、一般的な16bit結合で
-    receivedValue = ((uint16_t)highByte << 8) | lowByte;
-    
-    newDataAvailable = true;
+      firstByteReceived = false; // 次のペアのためにフラグをリセット
+    }
   }
 }
