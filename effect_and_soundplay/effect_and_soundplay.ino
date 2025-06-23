@@ -23,29 +23,29 @@ void setup() {
 }
 
 void loop() {
-  // マスターがSSピンをLOWにしている間だけ、SPI通信が行われる
-  // SPI.transfer()はマスターからのデータを受信するまでブロックする
-  // Arduino 2が2バイト送信するので、2回SPI.transfer()を呼び出す
-
-  // SSピンがLOWになっているか確認 (必須ではありませんが、デバッグで役立つことがあります)
+  // SSがLOWの時だけ処理 (前のデバッグスケッチのif文を復活させる)
   if (digitalRead(SS) == LOW) { 
-    byte highByte = SPI.transfer(0x00); // 上位8bitを受信 (0x00はマスターに返すダミーデータ)
-    byte lowByte = SPI.transfer(0x00);  // 下位4bitを受信
+    Serial.println("--- Master Selected ---"); // SSがLOWになったことを通知
 
-    uint16_t currentReceivedValue = (uint16_t)highByte << 4; // 上位8bitを12bitデータの上位にシフト
-    currentReceivedValue |= (lowByte & 0x0F);       // 下位4bitのみ結合
+    byte highByte = SPI.transfer(0x00);
+    Serial.print("  Received 1st byte (High): ");
+    Serial.println(highByte, HEX); // 16進数で表示
 
-    // 受信した生のバイト値も表示する（デバッグ用）
-    Serial.print("Raw High: ");
-    Serial.print(highByte, HEX); // 16進数で表示
-    Serial.print(", Raw Low: ");
-    Serial.print(lowByte, HEX);  // 16進数で表示
+    byte lowByte = SPI.transfer(0x00);
+    Serial.print("  Received 2nd byte (Low): ");
+    Serial.println(lowByte, HEX);  // 16進数で表示
 
-    Serial.print(", Received Value: ");
+    uint16_t currentReceivedValue = (uint16_t)highByte << 4; 
+    currentReceivedValue |= (lowByte & 0x0F);       
+
+    Serial.print("  Combined Value: ");
     Serial.println(currentReceivedValue);
+    Serial.println("-----------------------");
   } else {
-    // SSがHIGHの時は、ごく短いディレイを入れることでCPU使用率を下げられます。
-    // ただし、このテストスケッチでは非常に短時間しかHIGHにならないため、効果は小さいです。
-    // delayMicroseconds(10); 
+    // マスターが選択していない間は、極力何もしない
+    // ただし、loop()が速すぎてSerial.printlnがCPUを占有しないよう、
+    // 必要なら少しのdelayを入れるか、SSがHIGHの間の出力は控える
+    // Serial.println("SS is HIGH. Waiting..."); // これはたくさん出力されるので、通常はコメントアウト
+    delay(1); // 軽く待つ
   }
 }
