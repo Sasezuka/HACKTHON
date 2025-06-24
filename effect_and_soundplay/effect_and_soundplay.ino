@@ -26,9 +26,6 @@ void receiveEvent(int howMany) {
     // バッファオーバーフローチェック
     uint16_t nextWritePos = (receivedWritePtr + 1) % sizeof(receivedSampleBuffer);
     if (nextWritePos == receivedReadPtr) {
-        // バッファオーバーフロー！
-        // ここでSerial.printlnはNG (ISR内では使えない)
-        // LED点滅などで示すと良い
         return;
     }
     receivedSampleBuffer[receivedWritePtr] = incomingByte;
@@ -38,20 +35,14 @@ void receiveEvent(int howMany) {
 
 void setup() {
   Serial.begin(SERIAL_BAUDRATE);   // PCとのデバッグ用シリアル通信
-  Serial.println("--- Arduino 3 Setup Start (Receiver & DAC Output) ---");
 
   // I2Cスレーブとしてバスを開始、アドレス指定
   Wire.begin(MY_I2C_ADDRESS);
   // マスターからデータを受信したときにreceiveEvent関数を呼び出す
   Wire.onReceive(receiveEvent);
-  Serial.println("I2C Slave initialized.");
-
   // temariクラスの初期化
   // DACピンはA0を使うと仮定
   myEffectProcessor.init(SAMPLE_RATE, A0);
-  Serial.println("Temari (Effect) controller initialized.");
-
-  Serial.println("Arduino 3 Setup Complete. Waiting for audio samples via I2C.");
 }
 
 void loop() {
@@ -72,12 +63,6 @@ void loop() {
 
     // 3. DACに出力
     analogWrite(A0, dacValue);
-
-    // (オプション) デバッグ用にシリアルモニターにも表示
-    // Serial.print("I2C Received: ");
-    // Serial.print(scaledSample);
-    // Serial.print(" -> DAC Output: ");
-    // Serial.println(dacValue);
   }
   // リバーブ処理などは一旦保留
   // myEffectProcessor.processAndOutput(); // これはtemariにI2C受信機能を統合する場合に使う

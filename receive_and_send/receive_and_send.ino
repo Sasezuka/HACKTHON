@@ -39,17 +39,14 @@ void callback_generateAndSendSample(timer_callback_args_t *arg) {
 void setup() {
   Serial.begin(SERIAL_BAUDRATE);   // PCへのデバッグ出力 (USB Serial)
   Serial1.begin(SERIAL_BAUDRATE);  // Arduino 1からのノート情報受信 (Serial1のピンを使用)
-  Serial.println("--- Arduino 2 Setup Start (Synth Engine - I2C to Arduino 3) ---");
 
   // I2Cマスターとしてバスを開始
   Wire.begin();
-  Serial.println("I2C Master initialized.");
 
   // タイマー設定
   uint8_t type;
   int8_t ch = FspTimer::get_available_timer(type);
   if (ch < 0) {
-    Serial.println("Error: No available timer for audio generation!");
     while (1) {
       delay(1000);
     }
@@ -59,10 +56,6 @@ void setup() {
   timer.setup_overflow_irq();
   timer.open();
   timer.start();
-
-  // misuzuインスタンスの初期化はmisuzu::misuzu()コンストラクタで自動的に行われます。
-  Serial.println("misuzu controller initialized.");
-  Serial.println("Arduino 2 Setup Complete. Waiting for note commands from Arduino 1 via Serial1.");
 }
 
 void loop() {
@@ -74,7 +67,6 @@ void loop() {
       receiveBuffer[receiveBufferIndex++] = inChar;
     } else {
       receiveBufferIndex = 0;
-      Serial.println("Warning: Receive buffer overflow!");
     }
 
     if (inChar == '\n') {
@@ -104,28 +96,16 @@ void loop() {
 
           if (noteMapIndex >= 0 && noteMapIndex < NUM_NOTES) {
             if (stateStr == "PUSH") { // ボタンが押された (INPUT_PULLUPなのでLOW)
-              Serial.print(">> Received: Button ");
-              Serial.print(buttonIndex);
-              Serial.println(" PUSH - Starting synthesis.");
               myHarpController.handlePlayCommand(noteMapIndex); // マップしたインデックスを渡す
             } else if (stateStr == "RELEASE") { // ボタンが離された (INPUT_PULLUPなのでHIGH)
-              Serial.print(">> Received: Button ");
-              Serial.print(buttonIndex);
-              Serial.println(" RELEASE - Stopping synthesis.");
               myHarpController.handleStopCommand();
             } else {
-              Serial.print("Error: Invalid state string received: ");
-              Serial.println(stateStr);
             }
           } else {
-            Serial.print("Error: Invalid mapped note index: ");
-            Serial.println(noteMapIndex);
           }
         } else {
-          Serial.println("Error: Invalid serial command format (missing colon).");
         }
       } else {
-        Serial.println("Error: Invalid serial command format (missing 'B' prefix).");
       }
 
       receiveBufferIndex = 0;

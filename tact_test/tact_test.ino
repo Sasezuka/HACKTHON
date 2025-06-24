@@ -18,18 +18,11 @@ void handleButtonStateChange(int buttonIndex, int state) {
   } else { // ボタンが離された状態
     Serial1.println("PUSH"); // 離されたことを示す
   }
-  
-  // (オプション) デバッグ用にPCのシリアルモニターにも表示
-  Serial.print("[Debug] Sent via Serial1: B");
-  Serial.print(buttonIndex + 1);
-  Serial.print(":");
-  Serial.println((state == LOW) ? "PUSH" : "RELEASE");
 }
 
 void setup() {
   Serial.begin(115200);   // PCへのデバッグ出力用
   Serial1.begin(115200);  // 他のArduinoとの通信用 (ボーレートは受信側と合わせる)
-  Serial.println("Sender Arduino Started! (Using Serial1 for communication)");
 
   myWatcher.onButtonStateChange(handleButtonStateChange);
 }
