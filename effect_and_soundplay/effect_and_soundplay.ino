@@ -10,14 +10,11 @@ const int MY_I2C_ADDRESS = 0x8;
 Temari myEffectProcessor;
 
 // 受信したデータを格納するためのバッファとポインタ
-// I2CのonReceive割り込み関数は非常に短く保つ必要があるため、
-// データをバッファに格納し、loop()で処理するのが一般的です。
 volatile uint8_t receivedSampleBuffer[128]; // I2Cで受信する8bitサンプル用バッファ
 volatile uint16_t receivedWritePtr = 0;
 volatile uint16_t receivedReadPtr = 0;
 
 // I2Cデータを受信したときに実行される関数
-// ISR (割り込みサービスルーチン) のため、非常にシンプルに保つ必要があります。
 void receiveEvent(int howMany) {
   while (Wire.available()) {
     // Arduino 2は1バイト (8bit) でスケーリングされたサンプルを送ってくる想定

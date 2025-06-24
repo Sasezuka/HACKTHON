@@ -56,6 +56,7 @@ void setup() {
   timer.setup_overflow_irq();
   timer.open();
   timer.start();
+
 }
 
 void loop() {
@@ -67,6 +68,7 @@ void loop() {
       receiveBuffer[receiveBufferIndex++] = inChar;
     } else {
       receiveBufferIndex = 0;
+      Serial.println("Warning: Receive buffer overflow!");
     }
 
     if (inChar == '\n') {
@@ -96,8 +98,14 @@ void loop() {
 
           if (noteMapIndex >= 0 && noteMapIndex < NUM_NOTES) {
             if (stateStr == "PUSH") { // ボタンが押された (INPUT_PULLUPなのでLOW)
+              Serial.print(">> Received: Button ");
+              Serial.print(buttonIndex);
+              Serial.println(" PUSH - Starting synthesis.");
               myHarpController.handlePlayCommand(noteMapIndex); // マップしたインデックスを渡す
             } else if (stateStr == "RELEASE") { // ボタンが離された (INPUT_PULLUPなのでHIGH)
+              Serial.print(">> Received: Button ");
+              Serial.print(buttonIndex);
+              Serial.println(" RELEASE - Stopping synthesis.");
               myHarpController.handleStopCommand();
             } else {
             }

@@ -21,7 +21,6 @@ void handleButtonStateChange(int buttonIndex, int state) {
 }
 
 void setup() {
-  Serial.begin(115200);   // PCへのデバッグ出力用
   Serial1.begin(115200);  // 他のArduinoとの通信用 (ボーレートは受信側と合わせる)
 
   myWatcher.onButtonStateChange(handleButtonStateChange);
