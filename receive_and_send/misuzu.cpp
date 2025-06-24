@@ -38,22 +38,17 @@ void misuzu::handleStopCommand() {
 }
 
 uint16_t misuzu::getNextSample() {
-    float totalSampleFloat = 0.0f; // 全ての音源の合計サンプル値
-
-    // 全てのhatayaインスタンスからサンプルを取得し、合計する
-    for (int i = 0; i < NUM_NOTES; ++i) {
-        // hataya::getNextSample() は既にMAX_AMPLITUDEが加算されているので、
-        // 一旦MAX_AMPLITUDEを引いて中心0に戻してから加算する
-        totalSampleFloat += ((float)_voices[i].getNextSample() - MAX_AMPLITUDE);
+    if (_currentNoteIndex != -1) {
+        uint16_t sample = _voices[_currentNoteIndex].getNextSample();
+        // リリース中であれば、hatayaがisIdle()になったら_currentNoteIndexをリセット
+        // (misuzu::handleStopCommandで_isReleasingがtrueになった後に、このチェックを入れる)
+        // _isReleasingがtrueの場合、_voices[_currentNoteIndex].isIdle()で確認
+        if (_isReleasing && _voices[_currentNoteIndex].isIdle()) {
+           _currentNoteIndex = -1;
+           _isReleasing = false;
+           _noteOffStartTime = 0;
+        }
+        return sample;
     }
-    // DACの出力範囲にクリッピングして、0-4095の範囲に戻す
-    totalSampleFloat += MAX_AMPLITUDE; // DACの中心値を加算
-
-    if (totalSampleFloat < 0.0f) {
-        totalSampleFloat = 0.0f;
-    } else if (totalSampleFloat > 4095.0f) { // 12bit DACの場合、0-4095の範囲
-        totalSampleFloat = 4095.0f;
-    }
-
-    return (uint16_t)totalSampleFloat; // 16bit unsigned int で返す
+    return MAX_AMPLITUDE; // 音が鳴っていないときは無音（DACの中心値）を返す
 }
