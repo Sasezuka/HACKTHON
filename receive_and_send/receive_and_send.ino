@@ -9,8 +9,6 @@ misuzu myHarpController;
 
 const int I2C_SLAVE_ADDRESS = 0x8;
 
-#define NUM_LOCAL_BUTTONS NUM_NOTES // このファイルでは直接使わないが、定数として残しておく
-
 char receiveBuffer[MAX_RECEIVE_BUFFER_SIZE];
 byte receiveBufferIndex = 0;
 
@@ -23,6 +21,7 @@ volatile int bufferWriteIndex = 0; // ISRがバッファに書き込む位置
 volatile int bufferReadIndex = 0;  // loop()がバッファから読み出す位置
 volatile int bufferCount = 0;      // バッファ内に現在あるサンプル数
 
+
 // タイマー割り込みで呼ばれる、misuzu音源からサンプルを取得しバッファに格納する関数
 void callback_generateAndSendSample(timer_callback_args_t *arg) {
   uint16_t rawSample = myHarpController.getNextSample();
@@ -30,18 +29,17 @@ void callback_generateAndSendSample(timer_callback_args_t *arg) {
 
   // ★ I2C送信はここで行わない ★
 
-  // バッファが満タンでなければ、サンプルを格納
-  // volatile変数にアクセスするため、割り込みを一時的に無効化 (安全のため)
-  noInterrupts();
-  if (bufferCount < AUDIO_BUFFER_SIZE) {
+  // ★★★ 修正点：ISRからnoInterrupts()/interrupts()を削除 ★★★
+  // bufferWriteIndex と bufferCount はvolatileで、R4の32bitCPUなら通常アトミック。
+  // ただし、bufferCountの読み込みと更新がアトミックでない可能性はゼロではないが、パフォーマンス優先。
+  if (bufferCount < AUDIO_BUFFER_SIZE) { // バッファが満タンでなければ
     audioBuffer[bufferWriteIndex] = scaledSample;
     bufferWriteIndex = (bufferWriteIndex + 1) % AUDIO_BUFFER_SIZE; // リングバッファのようにインデックスを更新
-    bufferCount++;
+    bufferCount++; // バッファ内のサンプル数を増やす
   } else {
     // バッファオーバーフロー: データが生成速度より送信速度が遅い
-    // Serial.println("Audio Buffer Overflow!"); // 割り込み内でのSerial.printは避けるべきだが、デバッグ用
+    // 割り込み内でのSerial.printは絶対に避けるべき
   }
-  interrupts();
 }
 
 void setup() {
@@ -138,32 +136,27 @@ void loop() {
 
   // --- I2Cバッファからの送信処理 ---
   // バッファに送信可能なデータ（バッチサイズ以上）がある場合
-  // volatile変数アクセスとbufferCount, bufferReadIndex更新のため、noInterrupts()で囲む
+  // ★★★ 修正点：ここではnoInterrupts()/interrupts()を残す（バッファ読み出しと更新の保護） ★★★
   noInterrupts();
   if (bufferCount >= I2C_BATCH_SIZE) {
-    // 送信するバッチの先頭インデックスとサイズを一時変数にコピー
     int currentReadBatchIndex = bufferReadIndex;
     int samplesToProcess = I2C_BATCH_SIZE;
 
-    // 割り込みを再度有効にする (I2C送信は時間がかかるため、ISRが動けるようにする)
-    interrupts();
+    interrupts(); // I2C送信は時間がかかるため、ISRが動けるように一時的に割り込みを有効に
 
     Wire.beginTransmission(I2C_SLAVE_ADDRESS);
     for (int i = 0; i < samplesToProcess; i++) {
-      // バッファからサンプルを読み出し、I2Cで書き込む
       Wire.write(audioBuffer[currentReadBatchIndex]);
       currentReadBatchIndex = (currentReadBatchIndex + 1) % AUDIO_BUFFER_SIZE;
     }
     Wire.endTransmission();
 
-    // I2C送信完了後、バッファの状態を更新 (安全のため、再度割り込み無効化)
-    noInterrupts();
+    noInterrupts(); // I2C送信完了後、バッファの状態を更新 (安全のため、再度割り込み無効化)
     bufferReadIndex = currentReadBatchIndex;
     bufferCount -= samplesToProcess;
-    interrupts();
+    interrupts(); // 処理が終わったら割り込みを有効に戻す
   } else {
     // バッファに十分なデータがない場合は、CPUを少し休ませる（他のタスクの実行を助ける）
-    // delay(1); // 必要に応じてコメント解除。厳密なリアルタイム性には注意
+    // delay(1);
   }
 }
-
