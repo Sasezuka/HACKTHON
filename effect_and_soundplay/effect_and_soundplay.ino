@@ -1,56 +1,84 @@
-// --- Arduino3_Waveform_Receiver_UART.ino ---
+#include <Arduino.h>
+#include <Wire.h>      // I2C通信ライブラリを追加
+#include "temari.h"    // temariクラスのヘッダファイル
+#include "constants.h" // SAMPLE_RATE, MAX_AMPLITUDE などの共通定数
 
-// #include <SPI.h> // SPIライブラリは不要になるのでコメントアウトまたは削除
+// このArduinoのスレーブI2Cアドレス (Arduino 2のI2C_SLAVE_ADDRESSと一致させる)
+const int MY_I2C_ADDRESS = 0x8;
 
-// 今回はSerial1で受信するので、Serial1を使います
-// TX: デジタルピン1, RX: デジタルピン0
+// temariクラスのインスタンス
+Temari myEffectProcessor;
 
-void setup() {
-  Serial.begin(115200);   // PCとのデバッグ用シリアル通信
-  Serial.println("Arduino 3 (Receiver) Waveform Started!");
+// 受信したデータを格納するためのバッファとポインタ
+// I2CのonReceive割り込み関数は非常に短く保つ必要があるため、
+// データをバッファに格納し、loop()で処理するのが一般的です。
+volatile uint8_t receivedSampleBuffer[128]; // I2Cで受信する8bitサンプル用バッファ
+volatile uint16_t receivedWritePtr = 0;
+volatile uint16_t receivedReadPtr = 0;
 
-  // ★★★ 変更点：Serial1 のボーレートを送信側と合わせる ★★★
-  Serial1.begin(SERIAL_BAUDRATE); // 送信側と同じボーレートに設定 (constants.hの値)
-  Serial.println("Serial1 initialized.");
+// I2Cデータを受信したときに実行される関数
+// ISR (割り込みサービスルーチン) のため、非常にシンプルに保つ必要があります。
+void receiveEvent(int howMany) {
+  while (Wire.available()) {
+    // Arduino 2は1バイト (8bit) でスケーリングされたサンプルを送ってくる想定
+    uint8_t incomingByte = Wire.read();
 
-  // SPI関連のセットアップは不要なので削除またはコメントアウト
-  // pinMode(SS, INPUT_PULLUP);
-  // SPI.begin();
+    // バッファオーバーフローチェック
+    uint16_t nextWritePos = (receivedWritePtr + 1) % sizeof(receivedSampleBuffer);
+    if (nextWritePos == receivedReadPtr) {
+        // バッファオーバーフロー！
+        // ここでSerial.printlnはNG (ISR内では使えない)
+        // LED点滅などで示すと良い
+        return;
+    }
+    receivedSampleBuffer[receivedWritePtr] = incomingByte;
+    receivedWritePtr = nextWritePos;
+  }
 }
 
-// 受信したデータを結合するための変数
-volatile byte receivedHighByte = 0;
-volatile byte receivedLowByte = 0;
-volatile bool firstByteReceived = false; // 1バイト目を受信したかを示すフラグ
+void setup() {
+  Serial.begin(SERIAL_BAUDRATE);   // PCとのデバッグ用シリアル通信
+  Serial.println("--- Arduino 3 Setup Start (Receiver & DAC Output) ---");
+
+  // I2Cスレーブとしてバスを開始、アドレス指定
+  Wire.begin(MY_I2C_ADDRESS);
+  // マスターからデータを受信したときにreceiveEvent関数を呼び出す
+  Wire.onReceive(receiveEvent);
+  Serial.println("I2C Slave initialized.");
+
+  // temariクラスの初期化
+  // DACピンはA0を使うと仮定
+  myEffectProcessor.init(SAMPLE_RATE, A0);
+  Serial.println("Temari (Effect) controller initialized.");
+
+  Serial.println("Arduino 3 Setup Complete. Waiting for audio samples via I2C.");
+}
 
 void loop() {
-  if (Serial1.available()) { // Serial1 に受信データがあるか確認
-    byte incomingByte = Serial1.read();
+  // 受信バッファに処理すべきサンプルがあるか確認
+  if (receivedReadPtr != receivedWritePtr) {
+    // 1. 受信バッファからサンプルを読み出す
+    uint8_t scaledSample = receivedSampleBuffer[receivedReadPtr];
+    receivedReadPtr = (receivedReadPtr + 1) % sizeof(receivedSampleBuffer);
 
-    if (!firstByteReceived) {
-      // 1バイト目（上位バイト）を受信
-      receivedHighByte = incomingByte;
-      firstByteReceived = true;
-    } else {
-      // 2バイト目（下位バイト）を受信
-      receivedLowByte = incomingByte;
-      
-      // 2バイトを結合して16bit値にする
-      uint16_t receivedSample = ((uint16_t)receivedHighByte << 8) | receivedLowByte;
+    // 2. 受け取った8bitサンプルをDACの12bitレンジに変換（単純なパススルー）
+    // 0-255 の8bit値を 0-4095 の12bit値にスケーリング
+    // 変換: val_12bit = val_8bit * (4095 / 255)
+    // 4095 / 255 は約16.0588... なので、16倍に近い
+    // 最も簡単なのは (val_8bit << 4) で下位4ビットをゼロ埋めすること
+    // 正確なスケーリング: val_8bit * 16 + val_8bit / 16 (おおよそ)
+    uint16_t dacValue = (uint16_t)scaledSample * 16; // 簡易スケーリング (255 -> 4080)
+    // uint16_t dacValue = map(scaledSample, 0, 255, 0, 4095); // map関数も使える
 
-      // 受信したデータをシリアルモニターに表示
-      Serial.print("Received (raw 2 bytes): ");
-      Serial.print(receivedHighByte, HEX);
-      Serial.print(" ");
-      Serial.print(receivedLowByte, HEX);
-      Serial.print(", Combined: ");
-      Serial.println(receivedSample);
+    // 3. DACに出力
+    analogWrite(A0, dacValue);
 
-      // TODO: ここで receivedSample を使って音を生成
-      // 例: analogWrite(PWM_PIN, receivedSample >> 4); // 12bitから8bitに変換してPWM出力
-      // あるいは、適切なDAC出力など
-
-      firstByteReceived = false; // 次のペアのためにフラグをリセット
-    }
+    // (オプション) デバッグ用にシリアルモニターにも表示
+    // Serial.print("I2C Received: ");
+    // Serial.print(scaledSample);
+    // Serial.print(" -> DAC Output: ");
+    // Serial.println(dacValue);
   }
+  // リバーブ処理などは一旦保留
+  // myEffectProcessor.processAndOutput(); // これはtemariにI2C受信機能を統合する場合に使う
 }
