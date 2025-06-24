@@ -50,7 +50,7 @@ private:
     // ADSRフェーズの期間（ミリ秒単位で設定）
     const uint32_t ATTACK_DURATION_MS = 5;   
     const uint32_t DECAY_DURATION_MS  = 300;   
-    const float    SUSTAIN_LEVEL_VAL  = 0.03f; 
+    const float    SUSTAIN_LEVEL_VAL  = 0.1f; 
     const uint32_t RELEASE_DURATION_MS= 600;  
 
     // 現在のADSRエンベロープ値を計算する関数
