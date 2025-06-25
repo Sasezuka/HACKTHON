@@ -13,9 +13,9 @@ void handleButtonStateChange(int buttonIndex, int state) {
   Serial1.print(":"); // 区切り文字
 
   // INPUT_PULLUPの場合、ボタンが押されるとLOWになるので注意
-  if (state == LOW) { // ボタンが押された状態
+  if (state == HIGH) { // ボタンが押された状態 (元のLOWと逆)
     Serial1.println("RELEASE"); // 押されたことを示す
-  } else { // ボタンが離された状態
+  } else { // ボタンが離された状態 (元のHIGHと逆)
     Serial1.println("PUSH"); // 離されたことを示す
   }
 }

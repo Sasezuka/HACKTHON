@@ -7,7 +7,7 @@
 // --- 1. オーディオ関連の共通設定 ---
 
 // サンプリングレート (Hz)
-#define SAMPLE_RATE 18000 
+#define SAMPLE_RATE 16000
 #define MAX_AMPLITUDE 2047 
 
 // --- 2. 音源関連の共通設定 (Arduino 2 で主に使用) ---
@@ -28,16 +28,17 @@ const int NUM_NOTES = sizeof(NOTE_FREQUENCIES) / sizeof(NOTE_FREQUENCIES[0]);
 // 基本となる音量 (hatayaクラスで使用)
 #define BASE_AMPLITUDE 0.5f // 0.0f - 1.0f の範囲で調整
 
+// ハープの倍音構成
 const float HARMONICS[] = {
     1.0f,   // 1次倍音（基音）
-    0.7f,   // 2次倍音
-    0.6f,   // 3次倍音
-    0.4f,   // 4次倍音
-    0.25f,  // 5次倍音
-    0.15f,  // 6次倍音
-    0.08f,  // 7次倍音
-    0.04f,  // 8次倍音
-    0.02f   // 9次倍音
+    0.048f,   // 2次倍音
+    0.039f,   // 3次倍音
+    0.036,   // 4次倍音
+    0.007f,  // 5次倍音
+    0.006f,  // 6次倍音
+    0.006f,  // 7次倍音
+    0.008f,  // 8次倍音
+    0.001f   // 9次倍音
 };
 
 const int NUM_HARMONICS = sizeof(HARMONICS) / sizeof(HARMONICS[0]);
