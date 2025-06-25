@@ -3,26 +3,25 @@
 
 #include "Arduino.h"
 
-// ボタンの状態変化を通知するためのコールバック関数の型定義
-// 引数: buttonIndex (ボタンの番号 0から始まる), state (HIGH/LOW)
+//センサの状態変化を通知するコールバック関数の定義
 typedef void (*SensorStateChangeCallback)(int sensorIndex, int state);
 
 class MySensorWatcher {
   public:
-    MySensorWatcher(const int buttonPins[], int numSensors);
+    MySensorWatcher(const int sensorPins[], int numSensors);
 
-    // ボタンの状態を全てチェックし、変化があったらコールバック関数を呼び出す
+    //センサの状態をチェックし，変化があったらコールバック関数を呼び出す
     void checkAllSensors();
 
-    // ボタンの状態変化時に呼ばれる関数を設定する
+    //センサの状態変化時に呼ばれる関数を設定
     void onSensorStateChange(SensorStateChangeCallback callback);
 
   private:
-    const int* _buttonPins;
+    const int* _sensorPins;
     int _numSensors;
-    int* _buttonStates;
+    int* _sensorStates;
     int* _lastSensorStates;
-    SensorStateChangeCallback _callback; // 登録されたコールバック関数
+    SensorStateChangeCallback _callback;
 };
 
 #endif

@@ -1,27 +1,25 @@
 #include "CheckSensor.h"
 
-const int BUTTON_PINS[] = {2, 3, 4, 5, 6, 7, 8, 9};
-const int NUM_BUTTONS = sizeof(BUTTON_PINS) / sizeof(BUTTON_PINS[0]);
+const int SENSOR_PINS[] = {2, 3, 4, 5, 6, 7, 8, 9};
+const int NUM_SENSORS = sizeof(SENSOR_PINS) / sizeof(SENSOR_PINS[0]);
 
-MySensorWatcher myWatcher(BUTTON_PINS, NUM_BUTTONS);
+MySensorWatcher myWatcher(SENSOR_PINS, NUM_SENSORS);
 
-// ボタンの状態変化時に呼ばれる関数
-void handleSensorStateChange(int buttonIndex, int state) {
-  // Serial1を使ってデータを送信します
+// センサの状態変化時に呼ばれる関数
+void handleSensorStateChange(int sensorIndex, int state) {
   Serial1.print("B"); // ボタンイベントであることを示すプレフィックス
-  Serial1.print(buttonIndex + 1); // ボタン番号 (1から始まる)
+  Serial1.print(sensorIndex + 1); // ボタン番号 (1から始まる)
   Serial1.print(":"); // 区切り文字
 
-  // INPUT_PULLUPの場合、ボタンが押されるとLOWになるので注意
-  if (state == HIGH) { // ボタンが押された状態 (元のLOWと逆)
+  if (state == HIGH) { //光が当たっていない
     Serial1.println("RELEASE"); // 押されたことを示す
-  } else { // ボタンが離された状態 (元のHIGHと逆)
+  } else { //光が当たっている
     Serial1.println("PUSH"); // 離されたことを示す
   }
 }
 
 void setup() {
-  Serial1.begin(115200);  // 他のArduinoとの通信用 (ボーレートは受信側と合わせる)
+  Serial1.begin(115200);  //Arduinoとの通信用
 
   myWatcher.onSensorStateChange(handleSensorStateChange);
 }
