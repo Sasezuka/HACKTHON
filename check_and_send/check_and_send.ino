@@ -1,12 +1,12 @@
-#include "kotone.h"
+#include "CheckSensor.h"
 
 const int BUTTON_PINS[] = {2, 3, 4, 5, 6, 7, 8, 9};
 const int NUM_BUTTONS = sizeof(BUTTON_PINS) / sizeof(BUTTON_PINS[0]);
 
-MyButtonWatcher myWatcher(BUTTON_PINS, NUM_BUTTONS);
+MySensorWatcher myWatcher(BUTTON_PINS, NUM_BUTTONS);
 
 // ボタンの状態変化時に呼ばれる関数
-void handleButtonStateChange(int buttonIndex, int state) {
+void handleSensorStateChange(int buttonIndex, int state) {
   // Serial1を使ってデータを送信します
   Serial1.print("B"); // ボタンイベントであることを示すプレフィックス
   Serial1.print(buttonIndex + 1); // ボタン番号 (1から始まる)
@@ -23,9 +23,9 @@ void handleButtonStateChange(int buttonIndex, int state) {
 void setup() {
   Serial1.begin(115200);  // 他のArduinoとの通信用 (ボーレートは受信側と合わせる)
 
-  myWatcher.onButtonStateChange(handleButtonStateChange);
+  myWatcher.onSensorStateChange(handleSensorStateChange);
 }
 
 void loop() {
-  myWatcher.checkAllButtons();
+  myWatcher.checkAllSensors();
 }

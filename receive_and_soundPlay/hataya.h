@@ -35,7 +35,7 @@ private:
     // ADSR設定値 (ミリ秒)
     const uint32_t ATTACK_DURATION_MS = 10;
     const uint32_t DECAY_DURATION_MS  = 300;
-    const float    SUSTAIN_LEVEL_VAL  = 0.7f;
+    const float    SUSTAIN_LEVEL_VAL  = 0.5f;
     const uint32_t RELEASE_DURATION_MS= 800;
 
     float calculateEnvelope();
