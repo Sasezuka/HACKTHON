@@ -1,5 +1,5 @@
-#ifndef HATAYA_H
-#define HATAYA_H
+#ifndef MAKESOUND_H
+#define MAKESOUND_H
 
 #include <Arduino.h>
 #include "constants.h"
@@ -7,9 +7,9 @@
 const int WAVEFORM_BUFFER_SIZE = 512; // 波形テーブルのサイズ
 typedef uint16_t sample_t;            // サンプル値の型
 
-class hataya {
+class makeSound {
 public:
-    hataya();
+    makeSound();
     void init(float freq, float amplitude, const float* harmonics, int numHarmonics, uint32_t sampleRate);
     sample_t getNextSample();
     void noteOn();

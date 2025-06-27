@@ -1,18 +1,18 @@
-#ifndef MISUZU_H
-#define MISUZU_H
+#ifndef PLAYSOUND_H
+#define PLAYSOUND_H
 
-#include "hataya.h"
+#include "makeSound.h"
 #include "constants.h"
 
-class misuzu {
+class playSound {
 public:
-    misuzu();
+    playSound();
     void handlePlayCommand(int noteIndex);
     void handleStopCommand();
     uint16_t getNextSample();
 
 private:
-    hataya _voices[NUM_NOTES]; // 各ノートに対応する音源
+    makeSound _voices[NUM_NOTES]; // 各ノートに対応する音源
     int _currentNoteIndex;      // 現在鳴っている音のインデックス
     bool _isReleasing;          // リリース中かどうかのフラグ
 };

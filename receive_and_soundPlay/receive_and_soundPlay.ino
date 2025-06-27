@@ -1,10 +1,10 @@
 #include "FspTimer.h"
 #include "constants.h"
-#include "misuzu.h"
+#include "playSound.h"
 
 //グローバル変数
 FspTimer timer;
-misuzu myHarpController;
+playSound myHarpController;
 
 char receiveBuffer[MAX_RECEIVE_BUFFER_SIZE];
 byte receiveBufferIndex = 0;

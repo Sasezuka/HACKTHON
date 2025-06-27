@@ -1,8 +1,8 @@
-#include "misuzu.h"
+#include "playSound.h"
 #include "constants.h"
 
 // --- コンストラクタ ---
-misuzu::misuzu() :
+playSound::playSound() :
     _currentNoteIndex(-1), _isReleasing(false)
 {
     // 全てのボイスを初期化
@@ -12,7 +12,7 @@ misuzu::misuzu() :
 }
 
 // --- 再生コマンド処理 ---
-void misuzu::handlePlayCommand(int noteIndex) {
+void playSound::handlePlayCommand(int noteIndex) {
     if (noteIndex < 0 || noteIndex >= NUM_NOTES) return;
     
     // 別の音が鳴っていれば、それを止める（レガートのような挙動）
@@ -27,7 +27,7 @@ void misuzu::handlePlayCommand(int noteIndex) {
 }
 
 // --- 停止コマンド処理 ---
-void misuzu::handleStopCommand() {
+void playSound::handleStopCommand() {
     if (_currentNoteIndex != -1) {
         _voices[_currentNoteIndex].noteOff();
         _isReleasing = true;
@@ -35,7 +35,7 @@ void misuzu::handleStopCommand() {
 }
 
 // --- 次のサンプルを取得 ---
-uint16_t misuzu::getNextSample() {
+uint16_t playSound::getNextSample() {
     if (_currentNoteIndex != -1) {
         // 現在の音のサンプル値を取得
         uint16_t sample = _voices[_currentNoteIndex].getNextSample();

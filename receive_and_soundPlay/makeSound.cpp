@@ -1,14 +1,9 @@
-#include "kaya.h"      // インクルードファイルを修正
-#include "constants.h" // constants.h をインクルードして、共通定数にアクセスできるようにする
-#include <math.h>      // sin関数を使用するため追加 (hataya.cppには元々無かったが、必要と判断)
-
-#ifndef PI // PIが未定義の場合、定義する
-#define PI 3.14159265358979323846f
-#endif
+#include "makeSound.h"      
+#include "constants.h" 
+#include <math.h>      
 
 // コンストラクタ
-// クラス名をhatayaからkayaに変更
-kaya::kaya() :
+makeSound::makeSound() :
     _frequency(0.0f),
     _amplitude(0.0f),
     _sampleRate(0),
@@ -26,8 +21,7 @@ kaya::kaya() :
 }
 
 // 音源の初期化と波形生成
-// クラス名をhatayaからkayaに変更
-void kaya::init(float freq, float amplitude, const float* harmonics, int numHarmonics, uint32_t sampleRate) {
+void makeSound::init(float freq, float amplitude, const float* harmonics, int numHarmonics, uint32_t sampleRate) {
     _frequency = freq;
     _amplitude = amplitude;
     _sampleRate = sampleRate;
@@ -40,8 +34,6 @@ void kaya::init(float freq, float amplitude, const float* harmonics, int numHarm
         float t = (float)i / WAVEFORM_BUFFER_SIZE; // 0.0f から 1.0f までの正規化された時間
 
         for (int h = 0; h < numHarmonics; ++h) {
-            // harmonics配列には倍音の「重み」が格納されていると仮定
-            // ここでは単純な整数倍音 (基音, 2倍音, 3倍音...) に重みを適用
             sampleValue += sin(2.0f * PI * (h + 1) * t) * harmonics[h];
         }
 
@@ -49,12 +41,10 @@ void kaya::init(float freq, float amplitude, const float* harmonics, int numHarm
         // MAX_AMPLITUDE を中心に配置 (例: 2047)
         _waveform[i] = (sample_t)(sampleValue * MAX_AMPLITUDE + MAX_AMPLITUDE);
     }
-    // ここでエンベロープの状態はリセットしない。noteOn()が呼ばれたときにリセットされる
 }
 
 // 次のサンプル値を取得（ADSRエンベロープ適用済み）
-// クラス名をhatayaからkayaに変更
-sample_t kaya::getNextSample() {
+sample_t makeSound::getNextSample() {
     // 1. エンベロープ値を計算
     float envelopeValue = calculateEnvelope();
 
@@ -103,8 +93,7 @@ sample_t kaya::getNextSample() {
 }
 
 // 音を鳴らし始める
-// クラス名をhatayaからkayaに変更
-void kaya::noteOn() {
+void makeSound::noteOn() {
     _currentStage = ATTACK;
     _currentLevel = 0.0f;        // アタック開始レベル
     _startLevel = 0.0f;
@@ -113,8 +102,7 @@ void kaya::noteOn() {
 }
 
 // 音を鳴らすのをやめる（減衰開始）
-// クラス名をhatayaからkayaに変更
-void kaya::noteOff() {
+void makeSound::noteOff() {
     if (_currentStage != IDLE && _currentStage != RELEASE) {
         _currentStage = RELEASE;
         _startLevel = _currentLevel; // 現在の音量レベルからリリース開始
@@ -124,14 +112,12 @@ void kaya::noteOff() {
 }
 
 // 音が完全に停止しているかチェック
-// クラス名をhatayaからkayaに変更
-bool kaya::isIdle() {
+bool makeSound::isIdle() {
     return _currentStage == IDLE;
 }
 
 // 現在のADSRエンベロープ値を計算する関数
-// クラス名をhatayaからkayaに変更
-float kaya::calculateEnvelope() {
+float makeSound::calculateEnvelope() {
     unsigned long elapsedTime = millis() - _stageStartTimeMillis;
     float level = 0.0f;
 
