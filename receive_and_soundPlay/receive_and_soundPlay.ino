@@ -9,6 +9,8 @@ playSound myHarpController;
 char receiveBuffer[MAX_RECEIVE_BUFFER_SIZE];
 byte receiveBufferIndex = 0;
 
+byte sendBuffer[2]; //processing出力のため
+
 //音声用バッファ
 #define AUDIO_BUFFER_SIZE 256
 volatile uint16_t audioBuffer[AUDIO_BUFFER_SIZE];
@@ -27,7 +29,7 @@ void callback_generateSample(timer_callback_args_t *arg) {
 }
 
 void setup() {
-    // USBシリアルをデバッグ表示用に初期化
+    //USBシリアルをデバッグ表示用に初期化
     Serial.begin(SERIAL_BAUDRATE);
     Serial.println("\nArduino1セットアップ開始");
 
@@ -102,7 +104,7 @@ void loop() {
     processSerialCommand();
 
     uint16_t sampleToPlay;
-    bool hasSample = false;
+    bool hasSample = false; //送信用のサンプルがあるかどうかのフラグ
 
     noInterrupts();
     if (bufferCount > 0) {
@@ -113,7 +115,11 @@ void loop() {
     }
     interrupts();
 
-    if (hasSample) {
+    if (hasSample) { //サンプルがある時
         analogWrite(A0, sampleToPlay);
+
+        sendBuffer[0] = highByte(sampleToPlay); // 上位8ビット
+        sendBuffer[1] = lowByte(sampleToPlay);  // 下位8ビット
+        Serial.write(sendBuffer, 2);
     }
 }
