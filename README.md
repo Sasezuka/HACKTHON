@@ -1,4 +1,3 @@
-```mermaid
 graph TD
     A[スタート] --> B{送信側Arduino 起動};
     B --> C[CheckSensor.h / .cpp クラス初期化];
